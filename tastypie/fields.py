@@ -643,8 +643,9 @@ class ToManyField(RelatedField):
     is_m2m = True
     help_text = 'Many related resources. Can be either a list of URIs or list of individually nested resource data.'
 
-    def __init__(self, to, attribute, related_name=None, default=NOT_PROVIDED, null=False, blank=False, readonly=False, full=False, unique=False, help_text=None):
+    def __init__(self, to, attribute, related_name=None, default=NOT_PROVIDED, null=False, blank=False, readonly=False, full=False, unique=False, related_order=None, help_text=None):
         super(ToManyField, self).__init__(to, attribute, related_name=related_name, default=default, null=null, blank=blank, readonly=readonly, full=full, unique=unique, help_text=help_text)
+        self.related_order = related_order
         self.m2m_bundles = []
 
     def dehydrate(self, bundle):
@@ -672,7 +673,14 @@ class ToManyField(RelatedField):
 
         # TODO: Also model-specific and leaky. Relies on there being a
         #       ``Manager`` there.
-        for m2m in the_m2ms.all():
+
+        m2m_qs = None
+        if self.related_order is None:
+            m2m_qs = the_m2ms.all()
+        else:
+            m2m_qs = the_m2ms.order_by(*self.related_order)
+
+        for m2m in m2m_qs:
             m2m_resource = self.get_related_resource(m2m)
             m2m_bundle = Bundle(obj=m2m, request=bundle.request)
             self.m2m_resources.append(m2m_resource)
